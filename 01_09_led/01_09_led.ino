@@ -2,17 +2,17 @@
 #include "AdafruitIO_WiFi.h"
 #include "NewPing.h"
 
-#define WIFI_SSID "..."
-#define WIFI_PASS "..."
+#define WIFI_SSID ""
+#define WIFI_PASS ""
 
 
-#define IO_USERNAME "..."
-#define IO_KEY "..."
+#define IO_USERNAME ""
+#define IO_KEY ""
 
 AdafruitIO_WiFi io(IO_USERNAME, IO_KEY, WIFI_SSID, WIFI_PASS);
 
 
-AdafruitIO_Feed *botaoled = io.feed("botaoled");
+AdafruitIO_Feed *warning_button = io.feed("warning button");
 
 // --- Configuração
 // #define pinNTC 34
@@ -26,6 +26,10 @@ AdafruitIO_Feed *botaoled = io.feed("botaoled");
 #define MAX_DISTANCE 100
 NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 
+//variaveis de controller
+bool AlarmeAtivo = false;
+unsigned int distancia = 0;
+const int LIMITE_DISTANCIA = 15;
 
 void setup() {
   Serial.begin(115200);
@@ -39,31 +43,51 @@ void setup() {
     ;
 
   // Serial.print("Conectando ao Adafruit IO");
-  // io.connect();
+  io.connect();
 
-  // while(io.status() < AIO_CONNECTED){
-  // Serial.print(".");
-  // delay(500);
-  // }
+  while (io.status() < AIO_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
 
-  // Serial.println();
-  // Serial.println(io.statusText());
+  Serial.println("");
+  Serial.println("conected!");
 
 
-  // botaoled -> onMessage(handleLed);
+  //vinculo
 
-  // delay(1000);
+  warning_button->onMessage(handleAlarm);
+
+  Serial.println("Soliciitando o estado inicial do alarme: ");
+
+  warning_button->get();
+
+  delay(1000);
 }
 
 void loop() {
+  io.run();
 
-  // Serial.print(F("DISTANCIA LIDA: "));
-  // Serial.println(sonar.ping_cm());
-  // delay(500);
-  // testebuzzer();
-  // testeled();
-  // pushbutton(Button);
-  // io.run();
+  //leitura do button
+  if (digitalRead(Button) == 1) {
+    delay(200);
+    AlarmeAtivo = !AlarmeAtivo;
 
+    warning_button->save(ativeWarn ? "true" : "false");
+    Serial.println(ativeWarn ? "Alarme armado pelo button" : "Alarme desarmado pelo button");
+  }
+
+  disstancia = sonar.ping_cm();
+  Serial.print("Distancia lida: ");
+  Serial.println(distancia);
+  Serial.println(" cm");
+
+  //ativação ou desativação do alarme
+  if(alarmeAtivo && distancia > 0 && distancia < LIMITE_DISTANCIA){
+    ativeWarn();
+  }
+  else{
+    offWarn();
+  }
   // delay(1000);
 }
